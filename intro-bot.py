@@ -23,7 +23,7 @@ async def on_voice_state_update(member, before, after):
                 voice.stop()
             if voice and voice.is_connected():
                 await voice.disconnect()
-    '''     
+    '''
     print('--------------------------------------')
     print(member)
     print(member.nick)
@@ -36,6 +36,8 @@ async def on_voice_state_update(member, before, after):
     if after.channel:
         print("after: ", after.channel.members)
     '''
+    if before.channel and after.channel and len(before.channel.members) == len(after.channel.members):
+        return 
     if member == client.user:
         return
     if after.channel:
