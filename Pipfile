@@ -1,0 +1,16 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+discord-py = {extras = ["voice"],version = "*"}
+certifi = "*"
+youtube-dl = "*"
+asgiref = "*"
+pydub = "*"
+
+[requires]
+python_version = "3.6"
