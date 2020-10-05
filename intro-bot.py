@@ -11,10 +11,6 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 client = commands.Bot('!')
 
 @client.event
-async def on_ready():
-    print("client is ready")
-
-@client.event
 async def on_voice_state_update(member, before, after):
     if before.channel and len(before.channel.members) == 1 and before.channel.members[0] == client.user:
         voice = get(client.voice_clients, guild=before.channel.guild)
@@ -23,19 +19,6 @@ async def on_voice_state_update(member, before, after):
                 voice.stop()
             if voice and voice.is_connected():
                 await voice.disconnect()
-    '''
-    print('--------------------------------------')
-    print(member)
-    print(member.nick)
-    print(before)
-    print(after)
-    print('b:', before.channel)
-    print('a:', after.channel)
-    if before.channel:
-        print("before: ", before.channel.members)
-    if after.channel:
-        print("after: ", after.channel.members)
-    '''
     if before.channel and after.channel and len(before.channel.members) == len(after.channel.members):
         return 
     if member == client.user:
@@ -60,7 +43,7 @@ async def on_voice_state_update(member, before, after):
         songs, directory = getSongs(member)
         if songs:
             song = random.choice(songs)
-            voice.play(discord.FFmpegPCMAudio(f"{directory}/{song}"), after=lambda e: exit_channel(voice))
+            voice.play(discord.FFmpegPCMAudio(f"{directory}/{song}"), after=lambda e: exitChannel(voice))
             voice.source = discord.PCMVolumeTransformer(voice.source)
             voice.source.volume = 0.3
     
@@ -68,10 +51,10 @@ def getSongs(member):
     directory = f'./{member}' if os.path.isdir(os.path.join('./', str(member))) else './DefaultSongs'
     return [song for song in os.listdir(directory) if song.endswith('.mp3')], directory
 
-@client.command(pass_context=True)
-async def G(ctx):
-    await ctx.send("Force!")
-    await ctx.send(client.latency)
+@async_to_sync
+async def exitChannel(voice):
+    if voice and voice.is_connected() and not voice.is_playing():
+        await voice.disconnect()
 
 @client.command(pass_context=True, aliases=['j', 'joi'])
 async def join(ctx):
@@ -89,7 +72,6 @@ async def join(ctx):
         await voice.move_to(channel)
     else:
         voice = await channel.connect()
-        print(f"The bot has connected to {channel}\n")
 
     await ctx.send(f"Joined {channel}")
 
@@ -100,33 +82,16 @@ async def leave(ctx):
 
     if voice and voice.is_connected():
         await voice.disconnect()
-        print(f"The bot has left {channel}")
         await ctx.send(f"Left {channel}")
     else:
-        print("Bot was told to leave voice channel, but was not in one")
         await ctx.send("Don't think I am in a voice channel")
 
 @client.command(pass_context=True)
 async def myClips(ctx):
     member = ctx.message.author
-    print(str(member))
     clips, directory = getSongs(member)
     for i in range(len(clips)):
         await ctx.send(f'{i+1}.) {clips[i]}')
-
-@async_to_sync
-async def exit_channel(voice):
-    if voice and voice.is_connected() and not voice.is_playing():
-        await voice.disconnect()
-
-def getMiliSeconds(time):
-    splits = list(reversed(time.split(':')))
-    for i in splits:
-        if len(i) >2:
-            raise NameError("Bad split")
-    seconds = sum([int(splits[i]) * (60**i) for i in range(len(splits))])
-    print("SECONDS: ", seconds)
-    return 1000*seconds
 
 @client.command(pass_context=True)
 async def add(ctx, url:str, start:str=None, end:str=None):
@@ -143,7 +108,6 @@ async def add(ctx, url:str, start:str=None, end:str=None):
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             title=ydl.extract_info(url, download=False)['title']
-            print("Downloading audio now\n")
             ydl.download([url])
     except youtube_dl.utils.DownloadError as e:
         await ctx.send(f"Failure: Clip for {url} was not added because it is not a valid Youtube link")
@@ -163,7 +127,14 @@ async def add(ctx, url:str, start:str=None, end:str=None):
         print(e)
         await ctx.send(f"Failure: Clip for {title} as not added because {start} and/or {end} were bad timestamps")
     os.remove(f'./{member}/{title}.mp3')
-    print("Finished!")
+
+def getMiliSeconds(time):
+    splits = list(reversed(time.split(':')))
+    for i in splits:
+        if len(i) >2:
+            raise NameError("Bad split")
+    seconds = sum([int(splits[i]) * (60**i) for i in range(len(splits))])
+    return 1000*seconds
 
 @client.command(pass_context=True)
 async def delete(ctx, *, filename:str):
